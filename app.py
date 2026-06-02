@@ -32,7 +32,7 @@ if user_prompt := st.chat_input("Type a message..."):
             st.markdown(ai_text)
             st.session_state.messages.append({"role": "assistant", "content": ai_text})
         except Exception as e:
-            st.error("Make sure the Ollama app is open and running on your computer!")import streamlit as st
+            st.error("Make sure the Ollama app is open and running on your computer!")
 import ollama
 
 # --- 1. CONFIGURATION ---
