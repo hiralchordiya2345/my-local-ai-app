@@ -151,14 +151,22 @@ if user_prompt:
                 if "ghibli" in user_prompt.lower() and "studio ghibli" not in user_prompt.lower():
                     final_prompt += ", in beautiful Studio Ghibli art style"
 
-                # --- FIXED: Corrected New SDK Imagen Model Name String ---
-                result = client.models.generate_images(
-                    model='imagen-3.0-generate-002',
-                    prompt=final_prompt,
-                    config=types.GenerateImagesConfig(number_of_images=1, output_mime_type="image/jpeg")
+                # --- FIXED: Corrected New SDK Imagen Model Name String --
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=final_prompt,
+                    config=types.GenerateContentConfig(
+                        response_modalities=["IMAGE"]
+                    )
                 )
-                for gen_img in result.generated_images:
-                    st.image(gen_img.image.image_bytes, use_container_width=True)
+                
+                for part in response.candidates[0].content.parts:
+                    if part.inline_data:
+                        st.image(part.inline_data.data, use_container_width=True)
+                        
+                ai_msg_data = {"role": "assistant", "content": f"🎨 Generated Art for: '{user_prompt}'"}
+                st.session_state.messages.append(ai_msg_data)
+                db.insert(ai_msg_data)
                     ai_msg_data = {"role": "assistant", "content": f"🎨 Generated Art for: '{user_prompt}'"}
                     st.session_state.messages.append(ai_msg_data)
                     db.insert(ai_msg_data)
