@@ -2,8 +2,8 @@ import streamlit as st
 from google import genai
 
 # --- 1. CONFIGURATION ---
-st.set_page_config(page_title="My AI App", page_icon="📱", layout="centered")
-st.title("🤖 My Custom AI App")
+st.set_page_config(page_title="Skibidi AI Brain", page_icon="⚡", layout="centered")
+st.title("⚡ skibidi AI Assistant here to help you")
 
 # PASTE YOUR GEMINI API KEY INSIDE THE QUOTES BELOW:
 API_KEY = st.secrets["GEMINI_API_KEY"]
