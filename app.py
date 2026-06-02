@@ -105,6 +105,6 @@ if user_prompt:
             tts = gTTS(text=first_sentence, lang='en')
             sound_file = io.BytesIO()
             tts.write_to_fp(sound_file)
-            st.audio(sound_file, format="audio/mp3", autoplay=True)
+            st.audio(sound_file, format="audio/mp3", autoplay=False)
         except Exception as e:
             st.error(f"Something went wrong! Error details: {e}")
