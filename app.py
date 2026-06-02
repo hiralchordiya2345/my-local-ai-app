@@ -13,7 +13,6 @@ st.set_page_config(page_title="Skibidi AI", page_icon="⚡", layout="centered")
 st.title("🤖 Skibidi AI Assistant")
 st.subheader("Always here to help you!")
 
-# CHANGE THIS VALUE: Set how many hours a user can chat for free
 FREE_TRIAL_HOURS = 2 
 
 API_KEY = st.secrets["GEMINI_API_KEY"]
@@ -25,31 +24,32 @@ def get_ai_client():
 client = get_ai_client()
 
 # --- 2. TIME TRACKING LOGIC ---
-# Tracks when the user started interacting with the app
 if "start_time" not in st.session_state:
     st.session_state.start_time = datetime.now()
 
-# Calculate if the user has run out of time
 current_time_check = datetime.now()
 time_elapsed = current_time_check - st.session_state.start_time
 time_left = timedelta(hours=FREE_TRIAL_HOURS) - time_elapsed
 
-# --- 3. HARD LOCK CHECK ---
-# If the time elapsed is greater than our limit, block the whole app!
 if time_elapsed >= timedelta(hours=FREE_TRIAL_HOURS):
     st.error("⚠️ **Your Free Trial Has Expired!**")
     st.write(f"You have used your {FREE_TRIAL_HOURS}-hour free session allocation for Skibidi AI.")
     st.info("🌟 **Unlock Unlimited Access:** Upgrade to our **Premium Plan** right now to clear this block, unlock higher quality responses, and chat forever!")
-    st.stop() # This completely STOPS the code from loading the chat boxes below!
-
-# --- 4. SHOW TIME REMINDER ---
+    st.stop()
 else:
-    # Optional: Shows a small countdown tracker at the top so they know their limit
     minutes_left = int(time_left.total_seconds() / 60)
     st.caption(f"⏳ Free session active. Remaining time: {minutes_left} minutes.")
 
-# --- 5. PERMANENT DATABASE STORAGE ---
+# --- 3. PERMANENT DATABASE STORAGE & NEW CHAT FEATURE ---
 db = TinyDB("chat_history.json")
+
+# Create a Sidebar Button to Start a New Chat
+with st.sidebar:
+    st.title("⚙️ Control Panel")
+    if st.button("🗑️ Start New Chat", use_container_width=True):
+        db.truncate() # This completely wipes out the chat_history.json database file!
+        st.session_state.messages = [] # Clears current screen memory
+        st.rerun() # Reloads the app instantly with a fresh blank screen
 
 if "messages" not in st.session_state:
     st.session_state.messages = db.all()
@@ -63,18 +63,18 @@ for msg in st.session_state.messages:
         if "image_path" in msg and msg["image_path"]:
             st.image(msg["image_path"], caption="Uploaded Photo", use_container_width=True)
 
-# --- 6. PHOTO UPLOADER FEATURE ---
+# --- 4. PHOTO UPLOADER FEATURE ---
 uploaded_file = st.file_uploader("📸 Upload a photo for Skibidi AI to see!", type=["png", "jpg", "jpeg"])
 image_to_send = None
 if uploaded_file is not None:
     image_to_send = PIL.Image.open(uploaded_file)
     st.image(image_to_send, caption="Image ready to send!", width=250)
 
-# --- 7. MICROPHONE RECORDER FEATURE ---
+# --- 5. MICROPHONE RECORDER FEATURE ---
 st.write("🎙️ Talk to Skibidi AI:")
 audio_source = mic_recorder(start_prompt="🔴 Start Recording", stop_prompt="⏹️ Stop & Send Voice", key='recorder')
 
-# --- 8. CHAT INPUT AND LOGIC ---
+# --- 6. CHAT INPUT AND LOGIC ---
 user_prompt = st.chat_input("Type your message here...")
 
 voice_bytes = None
@@ -87,7 +87,6 @@ if audio_source and 'bytes' in audio_source and audio_source['bytes'] is not Non
 if user_prompt:
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    # Show and save user message
     with st.chat_message("user"):
         st.caption(f"⏱️ {current_time}")
         st.markdown(user_prompt)
@@ -96,7 +95,6 @@ if user_prompt:
     st.session_state.messages.append(user_msg_data)
     db.insert(user_msg_data)
 
-    # Show and save AI response
     with st.chat_message("assistant"):
         try:
             contents_payload = [user_prompt]
@@ -128,7 +126,6 @@ if user_prompt:
             st.session_state.messages.append(ai_msg_data)
             db.insert(ai_msg_data)
 
-            # --- AUDIO VOICE FEATURE ---
             tts = gTTS(text=ai_text, lang='en')
             sound_file = io.BytesIO()
             tts.write_to_fp(sound_file)
