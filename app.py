@@ -4,7 +4,6 @@ from google.genai import types
 from gtts import gTTS
 import io
 import PIL.Image
-from datetime import datetime
 from tinydb import TinyDB
 from streamlit_mic_recorder import mic_recorder
 from supabase import create_client, Client
@@ -20,13 +19,11 @@ except Exception as e:
     st.error("⚠️ Secrets Setup Missing! Add SUPABASE_URL and SUPABASE_KEY to your Streamlit Advanced Secrets.")
     st.stop()
 
-# Initialize authentication states
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 if "user_email" not in st.session_state:
     st.session_state.user_email = ""
 
-# Layout formatting adjustments
 st.markdown("""
     <style>
     div[data-testid="stColumn"] { display: flex; align-items: flex-end; justify-content: center; }
@@ -69,7 +66,6 @@ if not st.session_state.authenticated:
             else:
                 st.warning("Please fill out your credentials.")
 
-# Halt unauthenticated traffic cleanly 
 if not st.session_state.authenticated:
     st.stop()
 
@@ -85,7 +81,6 @@ def get_ai_client():
 
 client = get_ai_client()
 
-# Cloud and Local History Matrix Allocation
 safe_user_id = "".join(char for char in st.session_state.user_email if char.isalnum())
 db = TinyDB(f"history_{safe_user_id}.json")
 
@@ -106,7 +101,6 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
-# Display active timeline stream
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
@@ -142,26 +136,28 @@ if user_prompt:
     db.insert(user_msg_data)
 
     with st.chat_message("assistant"):
-        # Image creation mode (Using free-tier multi-modality pipeline)
+        # Image creation mode (Bulletproof free generation stream)
         if any(kw in user_prompt.lower() for kw in ["draw", "generate image", "create art"]):
             try:
                 st.write("🎨 *Creating your masterpiece...*")
+                
                 final_prompt = user_prompt
                 if "ghibli" in user_prompt.lower() and "studio ghibli" not in user_prompt.lower():
-                    final_prompt += ", in beautiful Studio Ghibli art style"
-
-                response = client.models.generate_content(
-                    model="gemini-2.5-flash",
-                    contents=final_prompt,
-                    config=types.GenerateContentConfig(
-                        response_modalities=["IMAGE"]
-                    )
-                )
+                    final_prompt += ", beautiful Studio Ghibli art style"
                 
-                for part in response.candidates[0].content.parts:
-                    if part.inline_data:
-                        st.image(part.inline_data.data, use_container_width=True)
-                        
+                # Let Gemini curate a perfect image prompt concept
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=f"Create a short 1-sentence design descriptor for an art generator based on: '{final_prompt}'. Do not output anything else besides the descriptor sentence."
+                )
+                clean_descriptor = response.text.replace(" ", "%20").replace("\n", "")
+                
+                # Fetch artwork through the safe public art cache stream
+                art_url = f"https://image.pollinations.ai/prompt/{clean_descriptor}?width=1024&height=768&nologo=true"
+                
+                st.markdown(f"### Here is your masterpiece for: *{user_prompt}*")
+                st.image(art_url, use_container_width=True)
+                
                 ai_msg_data = {"role": "assistant", "content": f"🎨 Generated Art for: '{user_prompt}'"}
                 st.session_state.messages.append(ai_msg_data)
                 db.insert(ai_msg_data)
@@ -199,7 +195,6 @@ if user_prompt:
                 st.session_state.messages.append(ai_msg_data)
                 db.insert(ai_msg_data)
 
-                # Automated text-to-speech module
                 tts = gTTS(text=ai_text, lang='en')
                 sound_file = io.BytesIO()
                 tts.write_to_fp(sound_file)
