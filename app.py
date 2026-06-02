@@ -103,11 +103,8 @@ if user_prompt:
             db.insert(ai_msg_data)
 
             # --- AUDIO VOICE FEATURE (CLICK TO PLAY) ---
-            first_sentence = ai_text.split('.')[0] + '.'
-            tts = gTTS(text=first_sentence, lang='en')
+            # Pass the full text so it doesn't get cut off!
+            tts = gTTS(text=ai_text, lang='en')
             sound_file = io.BytesIO()
             tts.write_to_fp(sound_file)
             st.audio(sound_file, format="audio/mp3", autoplay=False)
-
-        except Exception as e:
-            st.error(f"Something went wrong! Error details: {e}")
