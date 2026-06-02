@@ -4,29 +4,29 @@ from google.genai import types
 from gtts import gTTS
 import io
 import PIL.Image
-from datetime import datetime, timedelta
+from datetime import datetime
 from tinydb import TinyDB
 from streamlit_mic_recorder import mic_recorder
 from supabase import create_client, Client
 
 st.set_page_config(page_title="Skibidi AI", page_icon="🤖", layout="centered")
 
-# --- 1. INITIALIZE SUPABASE CLOUD BACKEND ---
+# --- 1. SUPABASE CLOUD BACKEND SETUP ---
 try:
     SUPABASE_URL = st.secrets["SUPABASE_URL"]
     SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 except Exception as e:
-    st.error("⚠️ Secrets Setup Missing! Please add SUPABASE_URL and SUPABASE_KEY to your Streamlit App Advanced Secrets.")
+    st.error("⚠️ Secrets Setup Missing! Add SUPABASE_URL and SUPABASE_KEY to your Streamlit Advanced Secrets.")
     st.stop()
 
-# Initialize authentication data states
+# Initialize authentication states
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 if "user_email" not in st.session_state:
     st.session_state.user_email = ""
 
-# --- Custom UI CSS Styling ---
+# Layout formatting adjustments
 st.markdown("""
     <style>
     div[data-testid="stColumn"] { display: flex; align-items: flex-end; justify-content: center; }
@@ -34,26 +34,26 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. PREMIUM LOGIN WALL (EMAIL & SECURE PASSWORD) ---
+# --- 2. AUTHENTICATION PROTECTION WALL ---
 if not st.session_state.authenticated:
     st.title("🔐 Welcome to Skibidi AI")
-    st.subheader("Sign in with your email and password to begin")
+    st.subheader("Sign in with your credentials to begin")
     
     auth_mode = st.radio("Choose Option", ["Sign In / Login", "Create New Account"], horizontal=True)
     
     email = st.text_input("📧 Email Address", key="auth_email")
-    password = st.text_input("🔑 Password", type="password", help="Your password is fully encrypted and secure.", key="auth_pass")
+    password = st.text_input("🔑 Password", type="password", key="auth_pass")
     
     if auth_mode == "Create New Account":
         if st.button("🚀 Register My Account", use_container_width=True):
             if email and password:
                 try:
                     supabase.auth.sign_up({"email": email, "password": password})
-                    st.success("✅ Account registration requested! Please log in.")
+                    st.success("✅ Account registration completed! You can now log in.")
                 except Exception as e:
                     st.error(f"Registration Error: {e}")
             else:
-                st.warning("Please fill in both email and password fields.")
+                st.warning("Please fill in both fields.")
                 
     elif auth_mode == "Sign In / Login":
         if st.button("🔓 Sign In", use_container_width=True):
@@ -62,19 +62,18 @@ if not st.session_state.authenticated:
                     res = supabase.auth.sign_in_with_password({"email": email, "password": password})
                     st.session_state.authenticated = True
                     st.session_state.user_email = email
-                    st.session_state.start_time = datetime.now()
-                    st.success("Access Granted! Syncing profile...")
+                    st.success("Access Granted!")
                     st.rerun()
                 except Exception as e:
-                    st.error("❌ Incorrect email or password. Please try again.")
+                    st.error("❌ Incorrect email or password.")
             else:
                 st.warning("Please fill out your credentials.")
 
-# --- FIXED: Only stop unauthenticated users from passing through ---
+# Halt unauthenticated traffic cleanly 
 if not st.session_state.authenticated:
     st.stop()
 
-# --- 3. CORE PLATFORM SUBSCRIPTION ENGINE ---
+# --- 3. CORE APPLICATION PLATFORM ---
 st.title("🤖 Skibidi Ultra AI Assistant")
 st.caption(f"🔒 Security Active | Logged in as: **{st.session_state.user_email}**")
 
@@ -86,7 +85,7 @@ def get_ai_client():
 
 client = get_ai_client()
 
-# --- 4. HIGH-PERFORMANCE DYNAMIC DATA ENGINE ---
+# Cloud and Local History Matrix Allocation
 safe_user_id = "".join(char for char in st.session_state.user_email if char.isalnum())
 db = TinyDB(f"history_{safe_user_id}.json")
 
@@ -107,12 +106,12 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
-# Display current chat stream
+# Display active timeline stream
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# --- 5. STREAMLINED MEDIA & PROMPT INPUT ---
+# --- 4. MULTI-MODAL PIPELINE INPUTS ---
 col_file, col_mic = st.columns([3, 2])
 with col_file:
     uploaded_file = st.file_uploader("➕ Upload Photo", type=["png", "jpg", "jpeg"], label_visibility="collapsed")
@@ -143,7 +142,7 @@ if user_prompt:
     db.insert(user_msg_data)
 
     with st.chat_message("assistant"):
-        # Image creation mode
+        # Image creation mode (Using free-tier multi-modality pipeline)
         if any(kw in user_prompt.lower() for kw in ["draw", "generate image", "create art"]):
             try:
                 st.write("🎨 *Creating your masterpiece...*")
@@ -151,7 +150,6 @@ if user_prompt:
                 if "ghibli" in user_prompt.lower() and "studio ghibli" not in user_prompt.lower():
                     final_prompt += ", in beautiful Studio Ghibli art style"
 
-                # --- FIXED: Corrected New SDK Imagen Model Name String --
                 response = client.models.generate_content(
                     model="gemini-2.5-flash",
                     contents=final_prompt,
@@ -167,13 +165,10 @@ if user_prompt:
                 ai_msg_data = {"role": "assistant", "content": f"🎨 Generated Art for: '{user_prompt}'"}
                 st.session_state.messages.append(ai_msg_data)
                 db.insert(ai_msg_data)
-                    ai_msg_data = {"role": "assistant", "content": f"🎨 Generated Art for: '{user_prompt}'"}
-                    st.session_state.messages.append(ai_msg_data)
-                    db.insert(ai_msg_data)
             except Exception as e:
                 st.error(f"Art Engine Pipeline Interrupted: {e}")
         
-        # Standard chat mode
+        # Text conversation processing engine
         else:
             try:
                 contents_payload = []
@@ -204,7 +199,7 @@ if user_prompt:
                 st.session_state.messages.append(ai_msg_data)
                 db.insert(ai_msg_data)
 
-                # Voice player
+                # Automated text-to-speech module
                 tts = gTTS(text=ai_text, lang='en')
                 sound_file = io.BytesIO()
                 tts.write_to_fp(sound_file)
