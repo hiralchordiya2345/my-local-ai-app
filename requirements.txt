@@ -1,2 +1,5 @@
 streamlit
 google-genai
+gTTS
+Pillow
+tinydb
