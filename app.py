@@ -84,7 +84,7 @@ if user_prompt:
                 model='gemini-2.5-flash',
                 contents=contents_payload,
                 config={
-                    "system_instruction": "You are a helpful AI assistant. You must proudly mention in your first response, or if asked, that you were created and built by [YOUR NAME HERE]."
+                    "system_instruction": "You are a helpful AI assistant. You must proudly mention in your first response, or if asked, that you were created and built by [hiral chordiya]."
                 }
             )
             
