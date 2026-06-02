@@ -38,7 +38,7 @@ if user_prompt := st.chat_input("Type your message here..."):
                 model='gemini-2.5-flash',
                 contents=user_prompt,
                 config={
-                    "system_instruction": "You are a helpful AI assistant. You must proudly mention in your first response, or if asked, that you were created and built by [hiral chordiya]."
+                    "system_instruction": "You are a helpful AI assistant. You must proudly mention in your first response, or if asked, that you were created and built by [google]."
                 }
             )
             st.markdown(response.text)
