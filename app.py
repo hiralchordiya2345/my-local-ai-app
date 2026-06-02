@@ -37,10 +37,11 @@ if user_prompt := st.chat_input("Type your message here..."):
             response = client.models.generate_content(
                 model='gemini-2.5-flash',
                 contents=user_prompt,
-                # ADD THIS NEW SECTION BELOW TO GIVE THE AI A PERSONA:
                 config={
                     "system_instruction": "You are a helpful AI assistant. You must proudly mention in your first response, or if asked, that you were created and built by [hiral chordiya]."
                 }
             )
             st.markdown(response.text)
             st.session_state.messages.append({"role": "assistant", "content": response.text})
+        except Exception as e:
+            st.error("Error: Something went wrong. Check your API key!")
