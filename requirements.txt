@@ -3,3 +3,4 @@ google-genai
 gTTS
 Pillow
 tinydb
+streamlit-mic-recorder
