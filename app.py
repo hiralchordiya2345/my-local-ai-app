@@ -10,7 +10,7 @@ from streamlit_mic_recorder import mic_recorder
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(page_title="Skibidi AI", page_icon="⚡", layout="centered")
-st.title("⚡ Skibidi AI Assistant always here to help you1")
+st.title("⚡ Skibidi AI Assistant always here to help you!")
 
 API_KEY = st.secrets["GEMINI_API_KEY"]
 
