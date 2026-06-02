@@ -1,15 +1,16 @@
 import streamlit as st
 from google import genai
+from google.genai import types  # NEW: Needed to format the microphone audio properly
 from gtts import gTTS
 import io
 import PIL.Image
 from datetime import datetime
 from tinydb import TinyDB
-from streamlit_mic_recorder import mic_recorder  # NEW: Microphone recorder tool
+from streamlit_mic_recorder import mic_recorder
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(page_title="Skibidi AI", page_icon="⚡", layout="centered")
-st.title("⚡ Skibidi AI Assistant always here to help you")
+st.title("⚡ Skibidi AI Assistant always here to help you1")
 
 API_KEY = st.secrets["GEMINI_API_KEY"]
 
@@ -43,13 +44,11 @@ if uploaded_file is not None:
 
 # --- 4. MICROPHONE RECORDER FEATURE ---
 st.write("🎙️ Talk to your AI:")
-# This creates a Record button that listens to the user's mic
 audio_source = mic_recorder(start_prompt="🔴 Start Recording", stop_prompt="⏹️ Stop & Send Voice", key='recorder')
 
 # --- 5. CHAT INPUT AND LOGIC ---
 user_prompt = st.chat_input("Type your message here...")
 
-# If the user used the microphone instead of typing, process the audio data!
 voice_bytes = None
 if audio_source and 'bytes' in audio_source and audio_source['bytes'] is not None:
     voice_bytes = audio_source['bytes']
@@ -72,13 +71,18 @@ if user_prompt:
     # Show and save AI response
     with st.chat_message("assistant"):
         try:
-            # Build payload out of text, images, or recorded voice data
+            # Build payload out of text, images, or wrapped voice data
             contents_payload = [user_prompt]
             if image_to_send is not None:
                 contents_payload.append(image_to_send)
+                
             if voice_bytes is not None:
-                # This hands the actual raw microphone recording data over to Gemini's ears!
-                contents_payload.append({"data": voice_bytes, "mime_type": "audio/wav"})
+                # FIXED: We use types.Part.from_bytes so the new Gemini SDK can process it safely!
+                audio_part = types.Part.from_bytes(
+                    data=voice_bytes,
+                    mime_type="audio/wav"
+                )
+                contents_payload.append(audio_part)
 
             response = client.models.generate_content(
                 model='gemini-2.5-flash',
@@ -98,13 +102,12 @@ if user_prompt:
             st.session_state.messages.append(ai_msg_data)
             db.insert(ai_msg_data)
 
-            # --- FIXED AUDIO VOICE FEATURE (FAST!) ---
-            # We split the text and only speak the first sentence to make it super fast!
+            # --- AUDIO VOICE FEATURE (CLICK TO PLAY) ---
             first_sentence = ai_text.split('.')[0] + '.'
-            
             tts = gTTS(text=first_sentence, lang='en')
             sound_file = io.BytesIO()
             tts.write_to_fp(sound_file)
             st.audio(sound_file, format="audio/mp3", autoplay=False)
+
         except Exception as e:
             st.error(f"Something went wrong! Error details: {e}")
