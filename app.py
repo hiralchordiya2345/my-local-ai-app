@@ -98,11 +98,13 @@ if user_prompt:
             st.session_state.messages.append(ai_msg_data)
             db.insert(ai_msg_data)
 
-            # --- AUDIO VOICE FEATURE ---
-            tts = gTTS(text=ai_text, lang='en')
+            # --- FIXED AUDIO VOICE FEATURE (FAST!) ---
+            # We split the text and only speak the first sentence to make it super fast!
+            first_sentence = ai_text.split('.')[0] + '.'
+            
+            tts = gTTS(text=first_sentence, lang='en')
             sound_file = io.BytesIO()
             tts.write_to_fp(sound_file)
             st.audio(sound_file, format="audio/mp3", autoplay=True)
-
         except Exception as e:
             st.error(f"Something went wrong! Error details: {e}")
