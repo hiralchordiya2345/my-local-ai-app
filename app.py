@@ -6,7 +6,7 @@ st.set_page_config(page_title="My AI App", page_icon="📱", layout="centered")
 st.title("🤖 My Custom AI App")
 
 # PASTE YOUR GEMINI API KEY INSIDE THE QUOTES BELOW:
-API_KEY = "st.secrets["GEMINI_API_KEY"]
+API_KEY = st.secrets["GEMINI_API_KEY"]
 
 # Initialize the Gemini Client
 @st.cache_resource
