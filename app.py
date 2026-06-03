@@ -136,24 +136,18 @@ if user_prompt:
     db.insert(user_msg_data)
 
     with st.chat_message("assistant"):
-        # Image creation mode (Bulletproof free generation stream)
+        # Image creation mode (Stable, high-speed public engine)
         if any(kw in user_prompt.lower() for kw in ["draw", "generate image", "create art"]):
             try:
                 st.write("🎨 *Creating your masterpiece...*")
                 
-                final_prompt = user_prompt
-                if "ghibli" in user_prompt.lower() and "studio ghibli" not in user_prompt.lower():
-                    final_prompt += ", beautiful Studio Ghibli art style"
+                # Format prompt safely for a web URL
+                formatted_prompt = user_prompt.lower().replace(" ", "%20")
+                if "ghibli" in formatted_prompt and "studio%20ghibli" not in formatted_prompt:
+                    formatted_prompt += ",%20beautiful%20studio%20ghibli%20art%20style"
                 
-                # Let Gemini curate a perfect image prompt concept
-                response = client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=f"Create a short 1-sentence design descriptor for an art generator based on: '{final_prompt}'. Do not output anything else besides the descriptor sentence."
-                )
-                clean_descriptor = response.text.replace(" ", "%20").replace("\n", "")
-                
-                # Fetch artwork through the safe public art cache stream
-                art_url = f"https://image.pollinations.ai/prompt/{clean_descriptor}?width=1024&height=768&nologo=true"
+                # Dynamic public image generation URL stream
+                art_url = f"https://image.pollinations.ai/prompt/{formatted_prompt}?width=1024&height=768&nologo=true"
                 
                 st.markdown(f"### Here is your masterpiece for: *{user_prompt}*")
                 st.image(art_url, use_container_width=True)
@@ -202,3 +196,4 @@ if user_prompt:
 
             except Exception as e:
                 st.error(f"Chat error: {e}")
+       
