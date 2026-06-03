@@ -73,33 +73,39 @@ if not st.session_state.authenticated:
 st.title("🤖 Skibidi Ultra AI Assistant")
 st.caption(f"🔒 Security Active | Logged in as: **{st.session_state.user_email}**")
 
-API_KEY = st.secrets["GEMINI_API_KEY"]
+# --- FIXED RATE-LIMITING STRATEGY ---
+with st.sidebar:
+    st.title("⚙️ Control Panel")
+    user_custom_key = st.text_input("🔑 Use Custom Gemini Key (Optional)", type="password", help="If the app says quota exhausted, paste your own key here.")
+    st.write("---")
+    if st.button("🗑️ Reset Chat View", use_container_width=True):
+        safe_user_id = "".join(char for char in st.session_state.user_email if char.isalnum())
+        TinyDB(f"history_{safe_user_id}.json").truncate()
+        st.session_state.messages = []
+        if "last_processed_audio" in st.session_state:
+            del st.session_state["last_processed_audio"]
+        st.rerun()
+    if st.button("🚪 Secure Log Out", use_container_width=True):
+        st.session_state.authenticated = False
+        st.session_state.messages = []
+        st.rerun()
 
-@st.cache_resource
-def get_ai_client():
-    return genai.Client(api_key=API_KEY)
+# Prioritize custom user key over system developer key if quota runs out
+FINAL_API_KEY = user_custom_key if user_custom_key else st.secrets["GEMINI_API_KEY"]
 
-client = get_ai_client()
+def get_ai_client(api_key):
+    return genai.Client(api_key=api_key)
+
+try:
+    client = get_ai_client(FINAL_API_KEY)
+except Exception as e:
+    st.error("Could not load AI client. Validate API Keys.")
 
 safe_user_id = "".join(char for char in st.session_state.user_email if char.isalnum())
 db = TinyDB(f"history_{safe_user_id}.json")
 
 if "messages" not in st.session_state:
     st.session_state.messages = db.all()
-
-with st.sidebar:
-    st.title("⚙️ Control Panel")
-    if st.button("🗑️ Reset Chat View", use_container_width=True):
-        db.truncate()
-        st.session_state.messages = []
-        if "last_processed_audio" in st.session_state:
-            del st.session_state["last_processed_audio"]
-        st.rerun()
-    st.write("---")
-    if st.button("🚪 Secure Log Out", use_container_width=True):
-        st.session_state.authenticated = False
-        st.session_state.messages = []
-        st.rerun()
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
@@ -136,19 +142,15 @@ if user_prompt:
     db.insert(user_msg_data)
 
     with st.chat_message("assistant"):
-        # Image creation mode (Stable, high-speed public engine)
+        # Image creation mode (Stable public engine)
         if any(kw in user_prompt.lower() for kw in ["draw", "generate image", "create art"]):
             try:
                 st.write("🎨 *Creating your masterpiece...*")
-                
-                # Format prompt safely for a web URL
                 formatted_prompt = user_prompt.lower().replace(" ", "%20")
                 if "ghibli" in formatted_prompt and "studio%20ghibli" not in formatted_prompt:
                     formatted_prompt += ",%20beautiful%20studio%20ghibli%20art%20style"
                 
-                # Dynamic public image generation URL stream
                 art_url = f"https://image.pollinations.ai/prompt/{formatted_prompt}?width=1024&height=768&nologo=true"
-                
                 st.markdown(f"### Here is your masterpiece for: *{user_prompt}*")
                 st.image(art_url, use_container_width=True)
                 
@@ -195,5 +197,7 @@ if user_prompt:
                 st.audio(sound_file, format="audio/mp3")
 
             except Exception as e:
-                st.error(f"Chat error: {e}")
-       
+                if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                    st.error("🚨 The main app free quota is completely full right now! Please wait a couple minutes or paste your own free Gemini API Key into the sidebar to bypass the block.")
+                else:
+                    st.error(f"Chat error: {e}")
